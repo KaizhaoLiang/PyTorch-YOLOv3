@@ -22,6 +22,8 @@ from torchvision import datasets
 from torchvision import transforms
 from torch.autograd import Variable
 import torch.optim as optim
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -105,9 +107,7 @@ if __name__ == "__main__":
             batches_done = len(dataloader) * epoch + batch_i
 
             imgs = Variable(imgs.to(device))
-            print(imgs.shape)
             targets = Variable(targets.to(device), requires_grad=False)
-            print(targets.shape)
             loss, outputs = model(imgs, targets)
             loss.backward()
 
