@@ -1,5 +1,6 @@
 from __future__ import division
 
+from transformer import *
 from models import *
 from utils.logger import *
 from utils.utils import *
@@ -24,6 +25,7 @@ import torch.optim as optim
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--model_name", type=str, default="darknet", help="model to run")
     parser.add_argument("--epochs", type=int, default=100, help="number of epochs")
     parser.add_argument("--batch_size", type=int, default=8, help="size of each image batch")
     parser.add_argument("--gradient_accumulations", type=int, default=2, help="number of gradient accums before step")
@@ -31,7 +33,7 @@ if __name__ == "__main__":
     parser.add_argument("--data_config", type=str, default="config/coco.data", help="path to data config file")
     parser.add_argument("--pretrained_weights", type=str, help="if specified starts from checkpoint model")
     parser.add_argument("--n_cpu", type=int, default=8, help="number of cpu threads to use during batch generation")
-    parser.add_argument("--img_size", type=int, default=416, help="size of each image dimension")
+    parser.add_argument("--img_size", type=int, default=384, help="size of each image dimension")
     parser.add_argument("--checkpoint_interval", type=int, default=1, help="interval between saving model weights")
     parser.add_argument("--evaluation_interval", type=int, default=1, help="interval evaluations on validation set")
     parser.add_argument("--compute_map", default=False, help="if True computes mAP every tenth batch")
@@ -53,7 +55,10 @@ if __name__ == "__main__":
     class_names = load_classes(data_config["names"])
 
     # Initiate model
-    model = Darknet(opt.model_def).to(device)
+    if opt.model_name == 'darknet':
+        model = Darknet(opt.model_def).to(device)
+    elif opt.model_name == 'vit':
+        model = Vision_Transformer().to(device)
     model.apply(weights_init_normal)
 
     # If specified we start from checkpoint
@@ -64,7 +69,7 @@ if __name__ == "__main__":
             model.load_darknet_weights(opt.pretrained_weights)
 
     # Get dataloader
-    dataset = ListDataset(train_path, augment=True, multiscale=opt.multiscale_training)
+    dataset = ListDataset(train_path, img_size = opt.img_size, augment=True, multiscale=opt.multiscale_training if opt.model_name == "darknet" else False)
     dataloader = torch.utils.data.DataLoader(
         dataset,
         batch_size=opt.batch_size,
@@ -100,8 +105,9 @@ if __name__ == "__main__":
             batches_done = len(dataloader) * epoch + batch_i
 
             imgs = Variable(imgs.to(device))
+            print(imgs.shape)
             targets = Variable(targets.to(device), requires_grad=False)
-
+            print(targets.shape)
             loss, outputs = model(imgs, targets)
             loss.backward()
 
