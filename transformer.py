@@ -32,7 +32,7 @@ class Vision_Transformer(nn.Module):
 
         cls_tokens = self.transformer.cls_token.expand(B, -1, -1)  # stole cls_tokens impl from Phil Wang, thanks
         x = torch.cat((cls_tokens, x), dim=1)
-        x = x + self.transformer.pos_embed
+        x = x + F.upsample(self.transformer.pos_embed.unsqueeze(0), size = (x.shape[1], x.shape[2])).squeeze(0)
         x = self.transformer.pos_drop(x)
         outputs = []
         for i, blk in enumerate(self.transformer.blocks):

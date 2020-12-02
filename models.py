@@ -1,5 +1,4 @@
 from __future__ import division
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -185,7 +184,8 @@ class YOLOLayer(nn.Module):
                 anchors=self.scaled_anchors,
                 ignore_thres=self.ignore_thres,
             )
-
+            obj_mask = obj_mask.bool()
+            node_mask = noobj_mask.bool()
             # Loss : Mask outputs to ignore non-existing objects (except with conf. loss)
             loss_x = self.mse_loss(x[obj_mask], tx[obj_mask])
             loss_y = self.mse_loss(y[obj_mask], ty[obj_mask])

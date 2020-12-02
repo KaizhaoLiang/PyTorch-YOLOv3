@@ -1,5 +1,6 @@
 from __future__ import division
-
+import warnings
+warnings.filterwarnings("ignore")
 from transformer import *
 from models import *
 from utils.logger import *
@@ -22,16 +23,14 @@ from torchvision import datasets
 from torchvision import transforms
 from torch.autograd import Variable
 import torch.optim as optim
-import warnings
-warnings.filterwarnings("ignore", category=UserWarning)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", type=str, default="darknet", help="model to run")
     parser.add_argument("--epochs", type=int, default=100, help="number of epochs")
     parser.add_argument("--lr", type=float, default=0.001, help="learning rate")
-    parser.add_argument("--batch_size", type=int, default=8, help="size of each image batch")
-    parser.add_argument("--gradient_accumulations", type=int, default=2, help="number of gradient accums before step")
+    parser.add_argument("--batch_size", type=int, default=16, help="size of each image batch")
+    parser.add_argument("--gradient_accumulations", type=int, default=8, help="number of gradient accums before step")
     parser.add_argument("--model_def", type=str, default="config/yolov3.cfg", help="path to model definition file")
     parser.add_argument("--data_config", type=str, default="config/coco.data", help="path to data config file")
     parser.add_argument("--pretrained_weights", type=str, help="if specified starts from checkpoint model")
@@ -72,7 +71,7 @@ if __name__ == "__main__":
             model.load_darknet_weights(opt.pretrained_weights)
 
     # Get dataloader
-    dataset = ListDataset(train_path, img_size = opt.img_size, augment=True, multiscale=opt.multiscale_training if opt.model_name == "darknet" else False)
+    dataset = ListDataset(train_path, img_size = opt.img_size, augment=True, multiscale=opt.multiscale_training)
     dataloader = torch.utils.data.DataLoader(
         dataset,
         batch_size=opt.batch_size,
@@ -106,10 +105,10 @@ if __name__ == "__main__":
         start_time = time.time()
         for batch_i, (_, imgs, targets) in enumerate(dataloader):
             batches_done = len(dataloader) * epoch + batch_i
-
+            _, _, img_dim, img_dim = imgs.shape
             imgs = Variable(imgs.to(device))
             targets = Variable(targets.to(device), requires_grad=False)
-            loss, outputs = model(imgs, targets)
+            loss, outputs = model(imgs, targets, img_dim = img_dim)
             loss.backward()
 
             if batches_done % opt.gradient_accumulations:
@@ -154,7 +153,7 @@ if __name__ == "__main__":
 
             model.seen += imgs.size(0)
 
-        if epoch % opt.evaluation_interval == 0:
+        if epoch % opt.evaluation_interval == 1:
             print("\n---- Evaluating Model ----")
             # Evaluate the model on the validation set
             precision, recall, AP, f1, ap_class = evaluate(
